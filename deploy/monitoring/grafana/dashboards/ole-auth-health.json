@@ -1,0 +1,71 @@
+{
+  "uid": "ole-auth-health",
+  "title": "Ole Auth Health",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "tags": ["ole", "auth"],
+  "time": {"from": "now-6h", "to": "now"},
+  "templating": {"list": []},
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Active Abuse Alerts",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_server_auth_abuse_active_alerts", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "colorMode": "value", "graphMode": "none"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}}
+    },
+    {
+      "type": "stat",
+      "title": "Rate-Limit Blocked Keys",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_server_auth_rate_limit_blocked_keys", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "colorMode": "value", "graphMode": "none"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 5}]}}}
+    },
+    {
+      "type": "stat",
+      "title": "Max Failures On One Key",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_server_auth_rate_limit_max_failures", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "colorMode": "value", "graphMode": "none"}
+    },
+    {
+      "type": "timeseries",
+      "title": "Abuse Alerts And Denied Requests",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "ole_server_auth_abuse_active_alerts", "legendFormat": "active alerts", "refId": "A"},
+        {"expr": "rate(ole_server_auth_abuse_total_denied_requests[5m])", "legendFormat": "denied req/s", "refId": "B"},
+        {"expr": "rate(ole_server_auth_abuse_total_alert_events[5m])", "legendFormat": "alert events/s", "refId": "C"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "short"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Session Endpoint 401/429",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "rate(ole_server_http_requests_total{path=\"/api/v1/sessions\",status=\"401\"}[5m])", "legendFormat": "401 login", "refId": "A"},
+        {"expr": "rate(ole_server_http_requests_total{path=\"/api/v1/sessions\",status=\"429\"}[5m])", "legendFormat": "429 login", "refId": "B"},
+        {"expr": "rate(ole_server_http_requests_total{path=\"/api/v1/sessions/refresh\",status=\"401\"}[5m])", "legendFormat": "401 refresh", "refId": "C"},
+        {"expr": "rate(ole_server_http_requests_total{path=\"/api/v1/sessions/refresh\",status=\"429\"}[5m])", "legendFormat": "429 refresh", "refId": "D"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "type": "bargauge",
+      "title": "Tracked Keys By Attempt Type",
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_server_auth_rate_limit_keys", "legendFormat": "{{attempt_type}}", "refId": "A"}],
+      "options": {"displayMode": "basic", "orientation": "horizontal", "reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}}
+    }
+  ]
+}

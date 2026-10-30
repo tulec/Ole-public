@@ -1,0 +1,72 @@
+{
+  "uid": "ole-signaling-health",
+  "title": "Ole Signaling Health",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "tags": ["ole", "signaling"],
+  "time": {"from": "now-6h", "to": "now"},
+  "templating": {"list": []},
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Networks",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_server_networks_total", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "title": "Network Members",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_server_network_members_total", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "title": "Connected Or Negotiating Tunnels",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(ole_server_tunnels_total{state=~\"open|negotiating\"})", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "title": "Signal Candidates",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(ole_server_signal_candidates_total)", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "timeseries",
+      "title": "Peers By Signaling State",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (connection_state) (ole_server_signaling_peers_total)", "legendFormat": "{{connection_state}}", "refId": "A"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Peers By Reachability",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (reachability) (ole_server_signaling_peers_total)", "legendFormat": "{{reachability}}", "refId": "A"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Candidates By Type",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (type) (ole_server_signal_candidates_total)", "legendFormat": "{{type}}", "refId": "A"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Tunnels By Mode And State",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum by (mode, state) (ole_server_tunnels_total)", "legendFormat": "{{mode}} {{state}}", "refId": "A"}]
+    }
+  ]
+}

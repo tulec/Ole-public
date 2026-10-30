@@ -1,0 +1,1787 @@
+openapi: 3.0.3
+info:
+  title: Ole API
+  version: "1.0.0"
+  description: REST API for the Ole Hamachi-style coordination server.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Auth
+  - name: Users
+  - name: Devices
+  - name: Networks
+  - name: Messages
+  - name: Peers
+  - name: File Transfers
+  - name: Tunnels
+  - name: Audit
+  - name: Admin
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    RelayStatus:
+      type: object
+      properties:
+        oversizedPackets: { type: integer, description: UDP datagrams discarded for exceeding the 1200-byte wire budget }
+        listenAddress: { type: string }
+        startedAtUnix: { type: integer, format: int64 }
+        activeBindings: { type: integer }
+        totalBindRequests: { type: integer }
+        successfulBinds: { type: integer }
+        bindDenials: { type: integer }
+        totalSendRequests: { type: integer }
+        forwardedPackets: { type: integer }
+        forwardedBytes: { type: integer, format: int64 }
+        sendDenials: { type: integer }
+        quotaDenials: { type: integer }
+        quotaWindowSeconds: { type: integer, format: int64 }
+        maxPacketsPerPeerWindow: { type: integer }
+        maxBytesPerPeerWindow: { type: integer, format: int64 }
+        malformedPackets: { type: integer }
+        abuseDenials: { type: integer }
+        abuseAlerts: { type: integer }
+        abuseBlockedSources: { type: integer }
+        abuseWindowSeconds: { type: integer, format: int64 }
+        abuseThreshold: { type: integer }
+        abuseBlockSeconds: { type: integer, format: int64 }
+    VersionStatus:
+      type: object
+      properties:
+        apiVersion: { type: string }
+        serverVersion: { type: string }
+        minClientVersion: { type: string }
+    AuthStatus:
+      type: object
+      properties:
+        activeAbuseAlerts: { type: integer }
+        loginAlerts: { type: integer }
+        refreshAlerts: { type: integer }
+        warningAlerts: { type: integer }
+        elevatedAlerts: { type: integer }
+        criticalAlerts: { type: integer }
+        blockedKeys: { type: integer }
+        totalAlertEvents: { type: integer }
+        totalDeniedRequests: { type: integer }
+        lastAlertType: { type: string }
+        lastSeverity: { type: string }
+        lastAlertedAtUnix: { type: integer, format: int64 }
+    Health:
+      type: object
+      properties:
+        status: { type: string }
+        time: { type: integer, format: int64 }
+        version:
+          $ref: "#/components/schemas/VersionStatus"
+        relay:
+          $ref: "#/components/schemas/RelayStatus"
+        auth:
+          $ref: "#/components/schemas/AuthStatus"
+    ProbeCheck:
+      type: object
+      properties:
+        status: { type: string }
+        detail: { type: string }
+    Probe:
+      type: object
+      properties:
+        status: { type: string }
+        time: { type: integer, format: int64 }
+        version:
+          $ref: "#/components/schemas/VersionStatus"
+        checks:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ProbeCheck"
+    Meta:
+      type: object
+      properties:
+        count:
+          type: integer
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        status: { type: string }
+      required: [id, email, status]
+    Device:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        name: { type: string }
+        publicKey: { type: string }
+        fingerprint: { type: string }
+        status: { type: string }
+        createdAtUnix: { type: integer, format: int64 }
+        revokedAtUnix: { type: integer, format: int64 }
+    Session:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        familyId: { type: string }
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        deviceName: { type: string }
+        ip: { type: string }
+        userAgent: { type: string }
+        lastUsedAtUnix: { type: integer, format: int64 }
+        expiresAtUnix: { type: integer, format: int64 }
+        revokedAtUnix: { type: integer, format: int64 }
+        reuseDetectedAtUnix: { type: integer, format: int64 }
+    Network:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        ownerId: { type: string }
+        access: { type: string }
+        deviceApprovalRequired: { type: boolean }
+        routingPolicy: { type: string }
+        groupTrafficPolicy: { type: string }
+        nameResolutionMode: { type: string }
+        dnsLabel: { type: string }
+        fileTransfersEnabled: { type: boolean }
+        fileTransferMaxBytes:
+          type: integer
+          format: int64
+          description: Per-network file-transfer policy limit. This can exceed the current 64 MiB sender-side control-plane payload-upload ceiling when sender-online dataplane delivery is used, and accepted receiver-side mirroring can durably persist payloads up to 128 MiB through the same chunk API.
+        approvedDeviceIds:
+          type: array
+          items: { type: string }
+        members:
+          type: array
+          items: { type: string }
+        memberRoles:
+          type: object
+          additionalProperties:
+            type: string
+    Invite:
+      type: object
+      properties:
+        code: { type: string }
+        networkId: { type: string }
+        expiresAtUnix: { type: integer, format: int64 }
+        maxUses: { type: integer }
+        uses: { type: integer }
+    Peer:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        deviceId: { type: string }
+        networkId: { type: string }
+        overlayCidr: { type: string }
+        virtualIp: { type: string }
+        endpoint: { type: string }
+        status: { type: string }
+        reachability: { type: string, enum: [UNKNOWN, DIRECT, RELAY] }
+        connectionState: { type: string, enum: [IDLE, DISCOVERING, DIRECT_CANDIDATE, NEGOTIATING, CONNECTED, RELAY_READY] }
+        lastSeenUnix: { type: integer, format: int64 }
+        lastSignaledAtUnix: { type: integer, format: int64 }
+    TransportPeerIdentity:
+      type: object
+      required: [peerId, deviceId, publicKey]
+      properties:
+        peerId: { type: string }
+        deviceId: { type: string }
+        publicKey: { type: string, description: Base64 Ed25519 public key }
+    TransportIdentitySnapshot:
+      type: object
+      required: [networkId, local, peers, expiresAtUnix]
+      properties:
+        networkId: { type: string }
+        local: { $ref: "#/components/schemas/TransportPeerIdentity" }
+        peers:
+          type: array
+          items: { $ref: "#/components/schemas/TransportPeerIdentity" }
+        expiresAtUnix: { type: integer, format: int64, description: Snapshot lease expires within 30 seconds }
+    Message:
+      type: object
+      properties:
+        id: { type: string }
+        networkId: { type: string }
+        fromPeerId: { type: string }
+        text: { type: string }
+        preview: { type: string }
+        sentAtUnix: { type: integer, format: int64 }
+    FileTransfer:
+      type: object
+      properties:
+        id: { type: string }
+        networkId: { type: string }
+        fromPeerId: { type: string }
+        toPeerId: { type: string }
+        fileName: { type: string }
+        sizeBytes: { type: integer, format: int64 }
+        status: { type: string, enum: [INIT, IN_PROGRESS, DONE, CANCELED, FAILED] }
+        progressPercent: { type: integer }
+        cancelReason: { type: string }
+        contentType: { type: string }
+        payloadSha256: { type: string }
+        payloadReady: { type: boolean }
+        payloadUploadedBytes: { type: integer, format: int64 }
+        uploadedAtUnix: { type: integer, format: int64 }
+        downloadedAtUnix: { type: integer, format: int64 }
+    FileTransferContent:
+      type: object
+      properties:
+        transfer:
+          $ref: "#/components/schemas/FileTransfer"
+        contentType: { type: string }
+        sha256: { type: string }
+        payloadBase64: { type: string }
+        sizeBytes: { type: integer, format: int64 }
+        uploadedAtUnix: { type: integer, format: int64 }
+        downloadedAtUnix: { type: integer, format: int64 }
+    FileTransferContentChunk:
+      type: object
+      properties:
+        transfer:
+          $ref: "#/components/schemas/FileTransfer"
+        contentType: { type: string }
+        sha256: { type: string }
+        payloadBase64: { type: string }
+        offsetBytes: { type: integer, format: int64 }
+        nextOffsetBytes: { type: integer, format: int64 }
+        totalSizeBytes: { type: integer, format: int64 }
+        uploadedAtUnix: { type: integer, format: int64 }
+        downloadedAtUnix: { type: integer, format: int64 }
+        complete: { type: boolean }
+    SignalCandidate:
+      type: object
+      properties:
+        id: { type: string }
+        peerId: { type: string }
+        networkId: { type: string }
+        type: { type: string, enum: [HOST, SRFLX, RELAY] }
+        protocol: { type: string, enum: [UDP] }
+        address: { type: string }
+        preference: { type: integer }
+        reachable: { type: boolean }
+        createdAtUnix: { type: integer, format: int64 }
+        expiresAtUnix: { type: integer, format: int64 }
+    Tunnel:
+      type: object
+      properties:
+        id: { type: string }
+        networkId: { type: string }
+        peerAId: { type: string }
+        peerBId: { type: string }
+        mode: { type: string, enum: [P2P, RELAY] }
+        state: { type: string, enum: [NEGOTIATING, OPEN, CLOSED, FAILED] }
+        createdAtUnix: { type: integer, format: int64 }
+    AuditEvent:
+      type: object
+      properties:
+        id: { type: string }
+        actorUserId: { type: string }
+        networkId: { type: string }
+        type: { type: string }
+        details: { type: string }
+        createdAtUnix: { type: integer, format: int64 }
+    IncidentReport:
+      type: object
+      properties:
+        id: { type: string }
+        category: { type: string }
+        severity: { type: string, enum: [warning, elevated, critical] }
+        status: { type: string }
+        source: { type: string }
+        summary: { type: string }
+        detail: { type: string }
+        recommendedAction: { type: string }
+        eventCount: { type: integer }
+        detectedAtUnix: { type: integer, format: int64 }
+        updatedAtUnix: { type: integer, format: int64 }
+    EnvelopeUser:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/User"
+    EnvelopeDevice:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/Device"
+    EnvelopeSession:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/Session"
+    EnvelopeNetwork:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/Network"
+    EnvelopeInvite:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/Invite"
+    EnvelopePeer:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/Peer"
+    EnvelopeMessage:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/Message"
+    EnvelopeFileTransfer:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/FileTransfer"
+    EnvelopeFileTransferContent:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/FileTransferContent"
+    EnvelopeFileTransferContentChunk:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/FileTransferContentChunk"
+    EnvelopeSignalCandidate:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/SignalCandidate"
+    EnvelopeTunnel:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/Tunnel"
+    ListSessions:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ListDevices:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Device"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ListNetworks:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Network"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ListPeers:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Peer"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ListMessages:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ListFileTransfers:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileTransfer"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ListSignalCandidates:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SignalCandidate"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ListTunnels:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tunnel"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ListAuditEvents:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ListIncidentReports:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/IncidentReport"
+        meta:
+          $ref: "#/components/schemas/Meta"
+paths:
+  /health:
+    get:
+      tags: [Auth]
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /livez:
+    get:
+      tags: [Auth]
+      summary: Liveness probe
+      responses:
+        "200":
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Probe"
+  /readyz:
+    get:
+      tags: [Auth]
+      summary: Readiness probe
+      responses:
+        "200":
+          description: Dependencies are ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Probe"
+        "503":
+          description: Dependencies are not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Probe"
+  /openapi.yaml:
+    get:
+      tags: [Auth]
+      summary: OpenAPI specification
+      responses:
+        "200":
+          description: YAML specification
+  /swagger:
+    get:
+      tags: [Auth]
+      summary: Swagger UI redirect
+      responses:
+        "307":
+          description: Redirect to local Swagger UI
+  /api/v1:
+    get:
+      tags: [Auth]
+      summary: API root
+      responses:
+        "200":
+          description: API descriptor
+  /api/v1/users:
+    post:
+      tags: [Users]
+      summary: Register user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeUser"
+  /api/v1/users/{userId}:
+    get:
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      summary: Get user
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeUser"
+  /api/v1/users/{userId}/password:
+    put:
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      summary: Change password
+      description: Requires the correct old password and a nonempty new password. Stores salted Argon2id with a conditional update; invalid or stale changes return 400 without writes. Storage failure returns generic 500 without password/hash diagnostics. Existing sessions keep their explicit revocation contract.
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [oldPassword, newPassword]
+              properties:
+                oldPassword: { type: string }
+                newPassword: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Incorrect old password, empty new password, or concurrent password conflict
+        "500":
+          description: Password storage unavailable
+  /api/v1/devices:
+    get:
+      tags: [Devices]
+      security: [{ bearerAuth: [] }]
+      summary: List current user's devices
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: fromUnix
+          schema: { type: integer, format: int64 }
+        - in: query
+          name: toUnix
+          schema: { type: integer, format: int64 }
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListDevices"
+    post:
+      tags: [Devices]
+      security: [{ bearerAuth: [] }]
+      summary: Enroll device for current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+                name: { type: string }
+                publicKey: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDevice"
+  /api/v1/devices/{deviceId}:
+    get:
+      tags: [Devices]
+      security: [{ bearerAuth: [] }]
+      summary: Get device
+      parameters:
+        - in: path
+          name: deviceId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDevice"
+    patch:
+      tags: [Devices]
+      security: [{ bearerAuth: [] }]
+      summary: Rename device or change device status
+      parameters:
+        - in: path
+          name: deviceId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                status: { type: string, enum: [ACTIVE, DISABLED] }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDevice"
+    delete:
+      tags: [Devices]
+      security: [{ bearerAuth: [] }]
+      summary: Revoke device
+      parameters:
+        - in: path
+          name: deviceId
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: No Content
+  /api/v1/sessions:
+    get:
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      summary: List current user's session families
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListSessions"
+    post:
+      tags: [Auth]
+      summary: Login
+      description: Verifies Argon2id or legacy SHA256; a verified legacy password is conditionally upgraded before issuing a session. Storage failure returns generic 500 and does not count as an incorrect password. Rate limited by canonical client IP without the TCP port, separately from refresh. X-Forwarded-For is used only from explicitly configured trusted proxies. Three failures block the next immediate attempt. Session IP metadata uses the same resolver.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+                deviceName: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeSession"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Password migration storage unavailable
+    delete:
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      summary: Revoke the access token's session family
+      description: Revokes the identified family, including a concurrently refreshed successor. Other independent login families remain active. A successful response is sent only after revocation completes.
+      parameters:
+        - in: query
+          name: accessToken
+          schema: { type: string }
+      responses:
+        "204":
+          description: Session family revoked
+        "401":
+          description: Invalid authorization or session no longer identifiable
+        "500":
+          description: Session lookup or revocation failed; retry is required
+  /api/v1/sessions/all:
+    delete:
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      summary: Revoke all sessions for current user
+      responses:
+        "204":
+          description: No Content
+  /api/v1/sessions/{sessionId}:
+    delete:
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      summary: Revoke a specific session family
+      description: Resolves a current or retained historical session ID within the current user's scope, without a list limit. Revokes the family including concurrently refreshed successors. Other users and independent login families remain active. Ambiguous legacy IDs are rejected without changes.
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Session family revoked
+        "404":
+          description: Unknown, foreign or ambiguous session ID, or invalid family
+        "500":
+          description: Session storage lookup or revocation failed
+  /api/v1/sessions/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate refresh token and issue a new access token
+      description: Rate limited by canonical client IP without the TCP port, separately from login. X-Forwarded-For is used only from explicitly configured trusted proxies, selecting the nearest untrusted hop. Session IP metadata uses the same resolver.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+                deviceName: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeSession"
+        "401":
+          description: Invalid token or reuse detected
+        "429":
+          description: Rate limited
+  /api/v1/networks:
+    get:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: List networks
+      parameters:
+        - in: query
+          name: ownerId
+          schema: { type: string }
+        - in: query
+          name: memberId
+          schema: { type: string }
+        - in: query
+          name: access
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListNetworks"
+    post:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Create network
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, access]
+              properties:
+                ownerId: { type: string }
+                name: { type: string }
+                access: { type: string }
+                deviceApprovalRequired: { type: boolean }
+                routingPolicy: { type: string }
+                groupTrafficPolicy: { type: string }
+                nameResolutionMode: { type: string }
+                dnsLabel: { type: string }
+                fileTransfersEnabled: { type: boolean }
+                fileTransferMaxBytes: { type: integer, format: int64 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNetwork"
+  /api/v1/networks/{networkId}:
+    get:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Get network
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+    delete:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Delete network
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: No Content
+  /api/v1/networks/{networkId}/name-resolution:
+    patch:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Update network name-resolution policy
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mode: { type: string }
+                dnsLabel: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/EnvelopeNetwork"
+  /api/v1/networks/{networkId}/file-transfer-policy:
+    patch:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Update network file-transfer policy
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled: { type: boolean }
+                maxBytes: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNetwork"
+  /api/v1/networks/{networkId}/group-traffic:
+    patch:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Update network group-traffic policy
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                policy: { type: string }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNetwork"
+  /api/v1/networks/{networkId}/routing-policy:
+    patch:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Update network routing policy
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                policy: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNetwork"
+  /api/v1/networks/{networkId}/members:
+    post:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Add member to network
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberId]
+              properties:
+                ownerId: { type: string }
+                memberId: { type: string }
+                role: { type: string }
+      responses:
+        "201":
+          description: Created
+  /api/v1/networks/{networkId}/members/{userId}:
+    patch:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Change network member role
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { type: string }
+      responses:
+        "200":
+          description: OK
+    delete:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Remove network member
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: No Content
+  /api/v1/networks/{networkId}/device-approvals/{deviceId}:
+    post:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Approve a device for a sensitive network
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: deviceId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNetwork"
+    delete:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Revoke a device approval for a sensitive network
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: deviceId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeNetwork"
+  /api/v1/networks/{networkId}/invites:
+    post:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Create invite
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ttlSec, maxUses]
+              properties:
+                ownerId: { type: string }
+                ttlSec: { type: integer, format: int64 }
+                maxUses: { type: integer }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeInvite"
+  /api/v1/invites/{code}/redemptions:
+    post:
+      tags: [Networks]
+      security: [{ bearerAuth: [] }]
+      summary: Join by invite
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+      responses:
+        "201":
+          description: Created
+  /api/v1/networks/{networkId}/peers:
+    get:
+      tags: [Peers]
+      security: [{ bearerAuth: [] }]
+      summary: List peers
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: userId
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListPeers"
+    post:
+      tags: [Peers]
+      security: [{ bearerAuth: [] }]
+      summary: Register peer
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceId, endpoint]
+              properties:
+                deviceId: { type: string }
+                userId: { type: string }
+                endpoint: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePeer"
+  /api/v1/networks/{networkId}/messages:
+    get:
+      tags: [Messages]
+      security: [{ bearerAuth: [] }]
+      summary: List network messages
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: fromPeerId
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListMessages"
+    post:
+      tags: [Messages]
+      security: [{ bearerAuth: [] }]
+      summary: Send a network message
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fromPeerId, text]
+              properties:
+                fromPeerId: { type: string }
+                text: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMessage"
+  /api/v1/messages/{messageId}:
+    get:
+      tags: [Messages]
+      security: [{ bearerAuth: [] }]
+      summary: Get message
+      parameters:
+        - in: path
+          name: messageId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMessage"
+  /api/v1/peers/{peerId}:
+    get:
+      tags: [Peers]
+      security: [{ bearerAuth: [] }]
+      summary: Get peer
+      parameters:
+        - in: path
+          name: peerId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+    patch:
+      tags: [Peers]
+      security: [{ bearerAuth: [] }]
+      summary: Update peer status, endpoint, or signaling state
+      parameters:
+        - in: path
+          name: peerId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                endpoint: { type: string }
+                status: { type: string }
+                reachability: { type: string, enum: [UNKNOWN, DIRECT, RELAY] }
+                connectionState: { type: string, enum: [IDLE, DISCOVERING, DIRECT_CANDIDATE, NEGOTIATING, CONNECTED, RELAY_READY] }
+      responses:
+        "200":
+          description: OK
+  /api/v1/peers/{peerId}/transport-identities:
+    get:
+      tags: [Peers]
+      security: [{ bearerAuth: [] }]
+      summary: Get current eligible transport device identities for an owned peer
+      description: >-
+        OLEP4 key snapshot, valid for at most 30 seconds. Requires an active
+        local user/device, network use permission and device approval where
+        required. Ineligible remote peers are omitted. Transport clients use
+        binary OLP4 UDP messages and the binary OLR2 relay carrier (logical
+        envelopes OLEP4 and OLER2), with a 1200-byte datagram budget, authenticated
+        fragmentation and no older-wire fallback. Transport encoding limits peer
+        IDs to 64 bytes, network/device IDs to 128 bytes and relay tokens to
+        512 bytes. The relay carrier token remains plaintext over UDP.
+      parameters:
+        - in: path
+          name: peerId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Current key snapshot; Cache-Control is no-store
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store] }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/TransportIdentitySnapshot" }
+        "400":
+          description: Local device is not active
+        "401":
+          description: Authentication, peer ownership or network-use permission denied
+        "404":
+          description: Peer, network or device does not exist
+        "403":
+          description: Local device approval is required
+        "500":
+          description: Transport identity storage is unavailable
+  /api/v1/peers/{peerId}/candidates:
+    get:
+      tags: [Peers]
+      security: [{ bearerAuth: [] }]
+      summary: List signaling candidates visible to a network member
+      parameters:
+        - in: path
+          name: peerId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListSignalCandidates"
+    post:
+      tags: [Peers]
+      security: [{ bearerAuth: [] }]
+      summary: Publish a signaling candidate for a peer
+      parameters:
+        - in: path
+          name: peerId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, protocol, address]
+              properties:
+                type: { type: string, enum: [HOST, SRFLX, RELAY] }
+                protocol: { type: string, enum: [UDP] }
+                address: { type: string }
+                preference: { type: integer }
+                reachable: { type: boolean }
+                ttlSec: { type: integer, format: int64 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeSignalCandidate"
+  /api/v1/networks/{networkId}/file-transfers:
+    get:
+      tags: [File Transfers]
+      security: [{ bearerAuth: [] }]
+      summary: List file transfers for a network
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: fromPeerId
+          schema: { type: string }
+        - in: query
+          name: toPeerId
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListFileTransfers"
+    post:
+      tags: [File Transfers]
+      security: [{ bearerAuth: [] }]
+      summary: Create a file transfer
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fromPeerId, toPeerId, fileName, sizeBytes]
+              properties:
+                fromPeerId: { type: string }
+                toPeerId: { type: string }
+                fileName: { type: string }
+                sizeBytes: { type: integer, format: int64 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFileTransfer"
+  /api/v1/file-transfers/{transferId}:
+    get:
+      tags: [File Transfers]
+      security: [{ bearerAuth: [] }]
+      summary: Get file transfer
+      parameters:
+        - in: path
+          name: transferId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFileTransfer"
+    patch:
+      tags: [File Transfers]
+      security: [{ bearerAuth: [] }]
+      summary: Accept, cancel, or update transfer progress
+      parameters:
+        - in: path
+          name: transferId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action: { type: string, enum: [ACCEPT, CANCEL] }
+                reason: { type: string }
+                progressPercent: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFileTransfer"
+  /api/v1/file-transfers/{transferId}/content:
+    get:
+      tags: [File Transfers]
+      security: [{ bearerAuth: [] }]
+      summary: Download file transfer content
+      parameters:
+        - in: path
+          name: transferId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFileTransferContent"
+    put:
+      tags: [File Transfers]
+      security: [{ bearerAuth: [] }]
+      summary: Upload file transfer content
+      parameters:
+        - in: path
+          name: transferId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payloadBase64]
+              properties:
+                contentType: { type: string }
+                payloadBase64: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFileTransfer"
+  /api/v1/file-transfers/{transferId}/content-chunks:
+    get:
+      tags: [File Transfers]
+      security: [{ bearerAuth: [] }]
+      summary: Download a file transfer content chunk
+      description: Control-plane chunk download path. Agents may use a sender-online dataplane path internally when both peers are available, but this REST endpoint remains the server-side fallback and persisted-payload path.
+      parameters:
+        - in: path
+          name: transferId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: offsetBytes
+          schema: { type: integer, format: int64 }
+        - in: query
+          name: limitBytes
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFileTransferContentChunk"
+    put:
+      tags: [File Transfers]
+      security: [{ bearerAuth: [] }]
+      summary: Upload a file transfer content chunk
+      description: Control-plane chunk upload path for persisted payloads. Sender-originated uploads remain capped at 64 MiB per transfer carried over bounded chunks, while accepted receiver-side mirroring can now durably persist dataplane-delivered payloads up to 128 MiB through the same endpoint.
+      parameters:
+        - in: path
+          name: transferId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payloadBase64]
+              properties:
+                contentType: { type: string }
+                offsetBytes: { type: integer, format: int64 }
+                payloadBase64: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeFileTransfer"
+  /api/v1/networks/{networkId}/tunnels:
+    get:
+      tags: [Tunnels]
+      security: [{ bearerAuth: [] }]
+      summary: List tunnels
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: state
+          schema: { type: string }
+        - in: query
+          name: mode
+          schema: { type: string }
+        - in: query
+          name: peerId
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListTunnels"
+    post:
+      tags: [Tunnels]
+      security: [{ bearerAuth: [] }]
+      summary: Create or update a tunnel negotiation record
+      description: Both distinct peers must belong to the network in the path and both owners must have USE_NETWORK. The caller must own at least one peer. Mode must be P2P or RELAY, or omitted for automatic choice.
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [peerAId, peerBId]
+              properties:
+                peerAId: { type: string }
+                peerBId: { type: string }
+                mode: { type: string, enum: [P2P, RELAY] }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTunnel"
+  /api/v1/tunnels/{tunnelId}:
+    get:
+      tags: [Tunnels]
+      security: [{ bearerAuth: [] }]
+      summary: Get tunnel
+      parameters:
+        - in: path
+          name: tunnelId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+    patch:
+      tags: [Tunnels]
+      security: [{ bearerAuth: [] }]
+      summary: Update tunnel state
+      description: Requires USE_NETWORK and ownership of at least one tunnel peer. Both peers must still belong to the tunnel network. Invalid legacy cross-network records cannot be activated.
+      parameters:
+        - in: path
+          name: tunnelId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [state]
+              properties:
+                state: { type: string, enum: [OPEN, CLOSED, FAILED] }
+      responses:
+        "200":
+          description: OK
+  /api/v1/audit-events:
+    get:
+      tags: [Audit]
+      security: [{ bearerAuth: [] }]
+      summary: List audit events visible to the caller
+      description: Returns the caller's unscoped personal events and network events authorized by VIEW_NETWORK_AUDIT. Authorization precedes limits and pagination. Invitation codes, including legacy records, are redacted before text filtering. Query filters cannot expand visibility.
+      parameters:
+        - in: query
+          name: actorUserId
+          schema: { type: string }
+        - in: query
+          name: type
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAuditEvents"
+  /api/v1/networks/{networkId}/audit-events:
+    get:
+      tags: [Audit]
+      security: [{ bearerAuth: [] }]
+      summary: List audit events for a network
+      description: Requires VIEW_NETWORK_AUDIT for this network. Invitation codes are redacted before text filtering, including in legacy records.
+      parameters:
+        - in: path
+          name: networkId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: actorUserId
+          schema: { type: string }
+        - in: query
+          name: type
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: fromUnix
+          schema: { type: integer, format: int64 }
+        - in: query
+          name: toUnix
+          schema: { type: integer, format: int64 }
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAuditEvents"
+  /api/v1/incidents:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: List administrative incident reports
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListIncidentReports"

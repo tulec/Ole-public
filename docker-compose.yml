@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ole-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ole}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ole_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ole}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ole-server:
+    image: ole-server:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: ole-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      OLE_DATABASE_URL: ${OLE_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/ole?sslmode=disable}
+      OLE_MIGRATIONS_DIR: /app/internal/store/postgres/migrations
+      OLE_HTTP_PORT: :8080
+    ports:
+      - "8080:8080"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: ole-prometheus
+    restart: unless-stopped
+    depends_on:
+      - ole-server
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./deploy/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: ole-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards/json:ro
+    ports:
+      - "3000:3000"
+
+volumes:
+  ole_postgres_data:
+  grafana_data:

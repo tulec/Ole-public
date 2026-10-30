@@ -1,0 +1,5 @@
+ALTER TABLE networks
+    ADD COLUMN IF NOT EXISTS file_transfers_enabled BOOLEAN NOT NULL DEFAULT TRUE;
+
+ALTER TABLE networks
+    ADD COLUMN IF NOT EXISTS file_transfer_max_bytes BIGINT NOT NULL DEFAULT 8388608;

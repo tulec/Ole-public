@@ -1,0 +1,2 @@
+ALTER TABLE networks
+    ADD COLUMN IF NOT EXISTS group_traffic_policy TEXT NOT NULL DEFAULT 'BLOCKED';

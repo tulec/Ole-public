@@ -1,0 +1,78 @@
+{
+  "uid": "ole-db-health",
+  "title": "Ole DB Health",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "tags": ["ole", "db"],
+  "time": {"from": "now-6h", "to": "now"},
+  "templating": {"list": []},
+  "panels": [
+    {
+      "type": "stat",
+      "title": "DB Ready",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_server_db_ready", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"},
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}}
+    },
+    {
+      "type": "stat",
+      "title": "Open Connections",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_server_db_open_connections", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "title": "In-Use Connections",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_server_db_in_use_connections", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "title": "Idle Connections",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_server_db_idle_connections", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "timeseries",
+      "title": "Connection Pool Size",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "ole_server_db_open_connections", "legendFormat": "open", "refId": "A"},
+        {"expr": "ole_server_db_in_use_connections", "legendFormat": "in use", "refId": "B"},
+        {"expr": "ole_server_db_idle_connections", "legendFormat": "idle", "refId": "C"},
+        {"expr": "ole_server_db_max_open_connections", "legendFormat": "max open", "refId": "D"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "DB Wait Pressure",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "rate(ole_server_db_wait_count_total[5m])", "legendFormat": "wait count/s", "refId": "A"},
+        {"expr": "rate(ole_server_db_wait_duration_seconds_total[5m])", "legendFormat": "wait duration/s", "refId": "B"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Cleanup Loop Health",
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "rate(ole_server_cleanup_cycles_total{result=\"success\"}[15m])", "legendFormat": "cleanup success/s", "refId": "A"},
+        {"expr": "rate(ole_server_cleanup_cycles_total{result=\"error\"}[15m])", "legendFormat": "cleanup error/s", "refId": "B"},
+        {"expr": "ole_server_cleanup_last_run_unix", "legendFormat": "last cleanup", "refId": "C"}
+      ]
+    }
+  ]
+}

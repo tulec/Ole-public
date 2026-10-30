@@ -1,0 +1,74 @@
+{
+  "uid": "ole-nat-traversal",
+  "title": "Ole NAT Traversal",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "tags": ["ole", "nat"],
+  "time": {"from": "now-6h", "to": "now"},
+  "templating": {"list": []},
+  "panels": [
+    {
+      "type": "stat",
+      "title": "STUN Configured",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_agent_stun_configured", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "title": "Public Endpoint Known",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_agent_public_endpoint_known", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "title": "Direct Success Rate",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "100 * ole_agent_direct_successes_total / clamp_min(ole_agent_direct_attempts_total, 1)", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"},
+      "fieldConfig": {"defaults": {"unit": "percent"}}
+    },
+    {
+      "type": "stat",
+      "title": "Last STUN Probe",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_agent_last_stun_probe_unix", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"},
+      "fieldConfig": {"defaults": {"unit": "dateTimeAsIso"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Direct Attempts / Success / Failure",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "rate(ole_agent_direct_attempts_total[5m])", "legendFormat": "attempts/s", "refId": "A"},
+        {"expr": "rate(ole_agent_direct_successes_total[5m])", "legendFormat": "successes/s", "refId": "B"},
+        {"expr": "rate(ole_agent_direct_failures_total[5m])", "legendFormat": "failures/s", "refId": "C"},
+        {"expr": "rate(ole_agent_relay_fallbacks_total[5m])", "legendFormat": "relay fallbacks/s", "refId": "D"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Connections By Reachability",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_agent_connection_reachability", "legendFormat": "{{reachability}}", "refId": "A"}]
+    },
+    {
+      "type": "bargauge",
+      "title": "Current NAT Type",
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_agent_nat_type_state", "legendFormat": "{{nat_type}}", "refId": "A"}],
+      "options": {"displayMode": "basic", "orientation": "horizontal", "reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}}
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+ALTER TABLE file_transfers
+    ADD COLUMN IF NOT EXISTS content_type TEXT,
+    ADD COLUMN IF NOT EXISTS payload_sha256 TEXT,
+    ADD COLUMN IF NOT EXISTS payload_ready BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS uploaded_at_unix BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS downloaded_at_unix BIGINT NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS file_transfer_payloads (
+    transfer_id TEXT PRIMARY KEY REFERENCES file_transfers(id) ON DELETE CASCADE,
+    payload BYTEA NOT NULL
+);

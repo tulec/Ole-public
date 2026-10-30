@@ -1,0 +1,16 @@
+.gocache*/
+dist/
+build/
+out/
+.idea/
+*.iml
+*.test
+*.out
+*.log
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx

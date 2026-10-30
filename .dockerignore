@@ -1,0 +1,10 @@
+.git
+.github
+.idea
+.gocache
+*.iml
+*.log
+.env
+.env.local
+deploy/monitoring/grafana/data
+deploy/monitoring/prometheus/data

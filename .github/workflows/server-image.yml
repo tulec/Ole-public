@@ -1,0 +1,98 @@
+name: Server Image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "cmd/server/**"
+      - "internal/**"
+      - "docs/openapi.yaml"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/server-image.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  build-server-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare image metadata inputs
+        id: prepare
+        shell: bash
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          repo="$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')"
+          echo "image=ghcr.io/${owner}/${repo}-server" >> "$GITHUB_OUTPUT"
+          echo "repository_url=https://github.com/${{ github.repository }}" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.prepare.outputs.image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and publish server image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: runtime
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+            REVISION=${{ github.sha }}
+            BUILD_DATE=${{ steps.prepare.outputs.build_date }}
+            REPOSITORY_URL=${{ steps.prepare.outputs.repository_url }}
+
+      - name: Install Cosign
+        if: github.ref_type == 'tag'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign published server image
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          image_ref="${{ steps.prepare.outputs.image }}@${{ steps.build.outputs.digest }}"
+          cosign sign --yes "$image_ref"

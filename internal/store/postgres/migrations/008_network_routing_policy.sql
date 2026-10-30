@@ -1,0 +1,2 @@
+ALTER TABLE networks
+    ADD COLUMN IF NOT EXISTS routing_policy TEXT NOT NULL DEFAULT 'SPLIT';

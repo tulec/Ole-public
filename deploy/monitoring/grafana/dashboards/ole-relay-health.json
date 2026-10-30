@@ -1,0 +1,73 @@
+{
+  "uid": "ole-relay-health",
+  "title": "Ole Relay Health",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "tags": ["ole", "relay"],
+  "time": {"from": "now-6h", "to": "now"},
+  "templating": {"list": []},
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Active Relay Bindings",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_server_relay_active_bindings", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "title": "Blocked Abuse Sources",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_server_relay_abuse_blocked_sources", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "title": "Relay Pool Size",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_agent_relay_pool_size", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "stat",
+      "title": "Relay Active On Agent",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_agent_relay_active", "refId": "A"}],
+      "options": {"reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""}, "graphMode": "none"}
+    },
+    {
+      "type": "timeseries",
+      "title": "Relay Forwarding Throughput",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "rate(ole_server_relay_forwarded_packets_total[5m])", "legendFormat": "packets/s", "refId": "A"},
+        {"expr": "rate(ole_server_relay_forwarded_bytes_total[5m])", "legendFormat": "bytes/s", "refId": "B"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Relay Denials And Abuse",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "rate(ole_server_relay_bind_denials_total[5m])", "legendFormat": "bind denials/s", "refId": "A"},
+        {"expr": "rate(ole_server_relay_send_denials_total[5m])", "legendFormat": "send denials/s", "refId": "B"},
+        {"expr": "rate(ole_server_relay_quota_denials_total[5m])", "legendFormat": "quota denials/s", "refId": "C"},
+        {"expr": "rate(ole_server_relay_abuse_alerts_total[5m])", "legendFormat": "abuse alerts/s", "refId": "D"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Agent Connection Transport Mode",
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 12},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "ole_agent_connection_transport_mode", "legendFormat": "{{mode}}", "refId": "A"}]
+    }
+  ]
+}
